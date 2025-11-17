@@ -1,5 +1,66 @@
 * { box-sizing: border-box; }
+ body { font-family: sans-serif; margin: 20px; }
+        .table-wrapper { max-height: 320px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; background: white; }
+        thead th { position: sticky; top: 0; background: #f4f4f4; z-index: 2; }
+        th { cursor: pointer; }
+        th:hover { background-color: #ddd; }
+        .form-container { margin-bottom: 20px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        input, button { padding: 8px; margin-right: 5px; }
+        /* Pequeno ajuste para o campo de busca */
+        #searchInput { min-width: 180px; }
 
+        /* botão excluir */
+        .delete-btn {
+            background:#e74c3c;
+            color:white;
+            border:none;
+            padding:6px 10px;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:0.9rem;
+            margin-left:6px;
+        }
+        .delete-btn:hover { background:#c0392b; }
+
+        .qty-btn {
+            background:#3498db;
+            color:white;
+            border:none;
+            padding:6px 8px;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:0.85rem;
+        }
+        .qty-btn:hover { background:#2b81b7; }
+
+        /* footer icon styles */
+        .footer-icons {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 12px;
+        }
+        .footer-icons a {
+            color: #9e9e9e;
+            text-decoration: none;
+            font-size: 1.05rem;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            transition: color 150ms ease, background 150ms ease;
+        }
+        .footer-icons a:hover {
+            color: #21fc04;
+            background: rgba(255,255,255,0.12);
+        }
+
+    
 /* corpo com gradiente do branco ao cinza e finalizando no preto */
 body {
     font-family: sans-serif;
