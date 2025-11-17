@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="responsivo.css">
+    <link rel="stylesheet" href="style.css">
+    <title>Tabela de Produtos</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; cursor: pointer; }
+        th:hover { background-color: #ddd; }
+        .form-container { margin-bottom: 20px; }
+        input, button { padding: 8px; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>Gestão de Produtos</h1>
+
+    <div class="form-container">
+        <input type="text" id="productName" placeholder="Nome do Produto">
+        <input type="date" id="productDate">
+        <button onclick="addProduct()">Adicionar Produto</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Nome do Produto</th>
+                <th onclick="sortTable(1)">Data de Cadastro</th>
+            </tr>
+        </thead>
+        <tbody id="productList">
+            <!-- Linhas de produtos serão adicionadas aqui via JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        const productList = document.getElementById('productList');
+        let products = []; // Array para armazenar os dados dos produtos
+
+        function addProduct() {
+            const nameInput = document.getElementById('productName');
+            const dateInput = document.getElementById('productDate');
+            const name = nameInput.value.trim();
+            const date = dateInput.value;
+
+            if (name && date) {
+                products.push({ name, date });
+                renderTable();
+                nameInput.value = '';
+                dateInput.value = '';
+            } else {
+                alert('Por favor, preencha ambos os campos.');
+            }
+        }
+
+        function renderTable() {
+            // Limpa a tabela antes de renderizar
+            productList.innerHTML = ''; 
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.name}</td>
+                    <td>${new Date(product.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                `;
+                productList.appendChild(row);
+            });
+        }
+
+        function sortTable(columnIndex) {
+            const isNameColumn = columnIndex === 0;
+            
+            products.sort((a, b) => {
+                if (isNameColumn) {
+                    // Ordenação por nome (string)
+                    return a.name.localeCompare(b.name);
+                } else {
+                    // Ordenação por data (comparação de datas)
+                    // Cria objetos Date para comparação correta
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    return dateA - dateB;
+                }
+            });
+            
+            // Inverte a ordem se já estiver ordenado de uma forma (para alternar crescente/decrescente)
+            // Uma lógica mais robusta envolveria rastrear a direção atual da ordenação.
+            // Para este exemplo simples, basta reordenar sempre de forma crescente.
+            // Se quiser alternar, adicione uma variável de estado para a direção.
+
+            renderTable(); // Re-renderiza a tabela com os dados ordenados
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,115 @@
+
+       
+
+        /* Responsivo para telas menores */
+        @media (max-width: 768px) {
+            body { margin: 10px; }
+            
+            h1 { font-size: 1.4rem; }
+            
+            .form-container {
+                flex-direction: column;
+            }
+            
+            input, button {
+                width: 100%;
+                padding: 10px;
+            }
+            
+            table {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 8px 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { margin: 5px; }
+            
+            h1 { font-size: 1.2rem; }
+            
+            th, td {
+                padding: 6px 4px;
+                font-size: 0.85rem;
+            }
+            
+            input, button {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Gestão de Produtos</h1>
+
+    <div class="form-container">
+        <input type="text" id="productName" placeholder="Nome do Produto">
+        <input type="date" id="productDate">
+        <button onclick="addProduct()">Adicionar Produto</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Nome do Produto</th>
+                <th onclick="sortTable(1)">Data de Cadastro</th>
+            </tr>
+        </thead>
+        <tbody id="productList">
+            <!-- Linhas de produtos serão adicionadas aqui via JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        const productList = document.getElementById('productList');
+        let products = []; // Array para armazenar os dados dos produtos
+
+        function addProduct() {
+            const nameInput = document.getElementById('productName');
+            const dateInput = document.getElementById('productDate');
+            const name = nameInput.value.trim();
+            const date = dateInput.value;
+
+            if (name && date) {
+                products.push({ name, date });
+                renderTable();
+                nameInput.value = '';
+                dateInput.value = '';
+            } else {
+                alert('Por favor, preencha ambos os campos.');
+            }
+        }
+
+        function renderTable() {
+            productList.innerHTML = ''; 
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.name}</td>
+                    <td>${new Date(product.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                `;
+                productList.appendChild(row);
+            });
+        }
+
+        function sortTable(columnIndex) {
+            const isNameColumn = columnIndex === 0;
+            
+            products.sort((a, b) => {
+                if (isNameColumn) {
+                    return a.name.localeCompare(b.name);
+                } else {
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    return dateA - dateB;
+                }
+            });
+
+        
+        }
+   
+

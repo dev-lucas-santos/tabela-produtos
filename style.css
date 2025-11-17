@@ -1,0 +1,52 @@
+ * { box-sizing: border-box; }
+        body { font-family: sans-serif; margin: 20px; padding: 0; }
+        
+        h1 { font-size: 1.8rem; }
+        
+        .form-container { 
+            margin-bottom: 20px; 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        input, button { 
+            padding: 8px 12px; 
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        input { 
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        
+        button:hover { background-color: #45a049; }
+        
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        
+        th, td { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            text-align: left; 
+        }
+        
+        th { 
+            background-color: #f4f4f4; 
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        th:hover { background-color: #ddd; }
