@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="responsivo.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" 
+    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+   
     <title>Tabela de Produtos</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
@@ -42,6 +45,30 @@
             font-size:0.85rem;
         }
         .qty-btn:hover { background:#2b81b7; }
+
+        /* footer icon styles */
+        .footer-icons {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 12px;
+        }
+        .footer-icons a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.05rem;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+        }
+        .footer-icons a:hover {
+            color: #21fc04;
+            background: rgba(255,255,255,0.12);
+        }
 
         @media (max-width: 520px) {
             .form-container { flex-direction:column; align-items:stretch; }
@@ -235,8 +262,28 @@
 
     <footer>
         <p>2025-DEV-Lucas-Silva</p>
-        <a href="https://github.com/DEV-Lucas-Silva">Contato</a>
+        <a class="contato" href="https://github.com/DEV-Lucas-Silva" target="_blank" rel="noopener">Contato</a>
+
+        <!--  ajustar hrefs para seus links/telefone  -->
+        <span class="footer-icons">
+            <a href="mailto:lucastumblr1997@gmail.com" title="E-mail" aria-label="E-mail" target="_blank" rel="noopener">
+                <i class="fas fa-envelope"></i>
+            </a>
+            <a href=" https://www.linkedin.com/in/lucas-santos-silva-521aba297?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" title="LinkedIn" aria-label="LinkedIn" target="_blank" rel="noopener">
+                <i class="fab fa-linkedin-in"></i>
+            </a>
+            <a href="https://wa.me/5511998222517" title="WhatsApp" aria-label="WhatsApp" target="_blank" rel="noopener">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+        </span>
+
+    
     </footer>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js" 
+    integrity="sha512-Tn2m0TIpgVyTzzvmxLNuqbSJH3JP8jm+Cy3hvHrW7ndTDcJ1w5mBiksqDBb8GpE2ksktFvDB/ykZ0mDpsZj20w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 
 </body>
 </html>
