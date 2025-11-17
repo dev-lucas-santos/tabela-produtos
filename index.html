@@ -8,9 +8,11 @@
     <title>Tabela de Produtos</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background-color: #f4f4f4; cursor: pointer; }
+        .table-wrapper { max-height: 320px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; background: white; }
+        thead th { position: sticky; top: 0; background: #f4f4f4; z-index: 2; }
+        th { cursor: pointer; }
         th:hover { background-color: #ddd; }
         .form-container { margin-bottom: 20px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
         input, button { padding: 8px; margin-right: 5px; }
@@ -26,8 +28,20 @@
             border-radius:4px;
             cursor:pointer;
             font-size:0.9rem;
+            margin-left:6px;
         }
         .delete-btn:hover { background:#c0392b; }
+
+        .qty-btn {
+            background:#3498db;
+            color:white;
+            border:none;
+            padding:6px 8px;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:0.85rem;
+        }
+        .qty-btn:hover { background:#2b81b7; }
 
         @media (max-width: 520px) {
             .form-container { flex-direction:column; align-items:stretch; }
@@ -41,32 +55,36 @@
 
     <div class="form-container">
         <input type="text" id="productName" placeholder="Nome do Produto">
+        <input type="number" id="productQuantity" placeholder="Quantidade" min="0">
         <input type="date" id="productDate">
         <button onclick="addProduct()">Adicionar Produto</button>
 
-        <!-- Campo de busca e botão adicionados -->
+        <!-- Campo de busca e botão -->
         <input type="text" id="searchInput" placeholder="Buscar produto...">
         <button onclick="searchProducts()">Buscar</button>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)">Nome do Produto</th>
-                <th onclick="sortTable(1)">Data de Cadastro</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="productList">
-            <!-- Linhas de produtos serão adicionadas aqui via JavaScript -->
-        </tbody>
-    </table>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Nome do Produto</th>
+                    <th onclick="sortTable(1)">Data de Cadastro</th>
+                    <th onclick="sortTable(2)">Quantidade</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="productList">
+                <!-- Linhas de produtos serão adicionadas aqui via JavaScript -->
+            </tbody>
+        </table>
+    </div>
 
     <script>
         const productList = document.getElementById('productList');
         const STORAGE_KEY = 'tabela_produtos_v1';
         let products = []; // Array para armazenar os dados dos produtos
-        let sortDirection = { 0: 1, 1: 1 }; // 1 = asc, -1 = desc
+        let sortDirection = { 0: 1, 1: 1, 2: 1 }; // 1 = asc, -1 = desc
 
         function saveProductsToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
@@ -77,6 +95,8 @@
             if (raw) {
                 try {
                     products = JSON.parse(raw);
+                    // garante que tenha quantity (compatibilidade com versões antigas)
+                    products = products.map(p => ({ id: p.id, name: p.name, date: p.date, quantity: (p.quantity || 1) }));
                 } catch (e) {
                     products = [];
                 }
@@ -87,29 +107,36 @@
 
         function addProduct() {
             const nameInput = document.getElementById('productName');
+            const quantityInput = document.getElementById('productQuantity');
             const dateInput = document.getElementById('productDate');
             const name = nameInput.value.trim();
             const date = dateInput.value;
+            const quantity = parseInt(quantityInput.value, 10);
 
-            if (name && date) {
-                const id = Date.now();
-                products.push({ id, name, date });
-                saveProductsToStorage();
-                renderTable();
-                nameInput.value = '';
-                dateInput.value = '';
-            } else {
-                alert('Por favor, preencha ambos os campos.');
+            if (!name || !date) {
+                alert('Por favor, preencha nome e data.');
+                return;
             }
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                alert('Quantidade deve ser um número inteiro maior que zero.');
+                return;
+            }
+
+            const id = Date.now();
+            products.push({ id, name, date, quantity });
+            saveProductsToStorage();
+            renderTable();
+            nameInput.value = '';
+            dateInput.value = '';
+            quantityInput.value = '';
         }
 
         // renderTable agora aceita uma lista opcional para mostrar (padrão: todos os produtos)
         function renderTable(list = products) {
-            // Limpa a tabela antes de renderizar
             productList.innerHTML = ''; 
             
             if (!list.length) {
-                productList.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;padding:12px;">Nenhum produto encontrado</td></tr>';
+                productList.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">Nenhum produto encontrado</td></tr>';
                 return;
             }
 
@@ -118,34 +145,37 @@
                 row.innerHTML = `
                     <td>${escapeHtml(product.name)}</td>
                     <td>${new Date(product.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                    <td><button class="delete-btn" onclick="deleteProduct(${product.id})">Excluir</button></td>
+                    <td style="text-align:center">${product.quantity}</td>
+                    <td style="white-space:nowrap">
+                        <button class="qty-btn" onclick="changeQuantity(${product.id}, -1)">Retirar</button>
+                        <button class="qty-btn" onclick="changeQuantity(${product.id}, 1)">Adicionar</button>
+                        <button class="delete-btn" onclick="deleteProduct(${product.id})">Excluir</button>
+                    </td>
                 `;
                 productList.appendChild(row);
             });
         }
 
         function sortTable(columnIndex) {
-            const isNameColumn = columnIndex === 0;
             const dir = sortDirection[columnIndex] || 1;
 
             products.sort((a, b) => {
-                if (isNameColumn) {
+                if (columnIndex === 0) {
                     return dir * a.name.localeCompare(b.name);
-                } else {
+                } else if (columnIndex === 1) {
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
                     return dir * (dateA - dateB);
+                } else if (columnIndex === 2) {
+                    return dir * (a.quantity - b.quantity);
                 }
+                return 0;
             });
 
-            // inverte direção para próxima vez
             sortDirection[columnIndex] = -dir;
-
             saveProductsToStorage();
-            // se estiver em busca, reaplica a busca; caso contrário re-renderiza todos
             const q = document.getElementById('searchInput').value.trim();
-            if (q) searchProducts();
-            else renderTable();
+            if (q) searchProducts(); else renderTable();
         }
 
         // Busca por nome (ou por data formatada). Se campo vazio, mostra todos.
@@ -159,9 +189,24 @@
                 const nameMatch = p.name.toLowerCase().includes(q);
                 const dateStr = new Date(p.date + 'T00:00:00').toLocaleDateString('pt-BR').toLowerCase();
                 const dateMatch = dateStr.includes(q);
-                return nameMatch || dateMatch;
+                const qtyMatch = String(p.quantity).includes(q);
+                return nameMatch || dateMatch || qtyMatch;
             });
             renderTable(filtered);
+        }
+
+        function changeQuantity(id, delta) {
+            const idx = products.findIndex(p => p.id === id);
+            if (idx === -1) return;
+            products[idx].quantity = Math.max(0, products[idx].quantity + delta);
+            if (products[idx].quantity === 0) {
+                // remove automaticamente quando chega a zero
+                products.splice(idx, 1);
+            }
+            saveProductsToStorage();
+            const q = document.getElementById('searchInput').value.trim();
+            if (q) searchProducts();
+            else renderTable();
         }
 
         function deleteProduct(id) {
@@ -187,6 +232,11 @@
             renderTable();
         });
     </script>
+
+    <footer>
+        <p>2025-DEV-Lucas-Silva</p>
+        <a href="https://github.com/DEV-Lucas-Silva">Contato</a>
+    </footer>
 
 </body>
 </html>
