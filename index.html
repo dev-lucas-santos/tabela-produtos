@@ -12,8 +12,27 @@
         th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
         th { background-color: #f4f4f4; cursor: pointer; }
         th:hover { background-color: #ddd; }
-        .form-container { margin-bottom: 20px; }
+        .form-container { margin-bottom: 20px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
         input, button { padding: 8px; margin-right: 5px; }
+        /* Pequeno ajuste para o campo de busca */
+        #searchInput { min-width: 180px; }
+
+        /* botão excluir */
+        .delete-btn {
+            background:#e74c3c;
+            color:white;
+            border:none;
+            padding:6px 10px;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:0.9rem;
+        }
+        .delete-btn:hover { background:#c0392b; }
+
+        @media (max-width: 520px) {
+            .form-container { flex-direction:column; align-items:stretch; }
+            input, button { width:100%; margin-right:0; }
+        }
     </style>
 </head>
 <body>
@@ -24,6 +43,10 @@
         <input type="text" id="productName" placeholder="Nome do Produto">
         <input type="date" id="productDate">
         <button onclick="addProduct()">Adicionar Produto</button>
+
+        <!-- Campo de busca e botão adicionados -->
+        <input type="text" id="searchInput" placeholder="Buscar produto...">
+        <button onclick="searchProducts()">Buscar</button>
     </div>
 
     <table>
@@ -31,6 +54,7 @@
             <tr>
                 <th onclick="sortTable(0)">Nome do Produto</th>
                 <th onclick="sortTable(1)">Data de Cadastro</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody id="productList">
@@ -40,7 +64,26 @@
 
     <script>
         const productList = document.getElementById('productList');
+        const STORAGE_KEY = 'tabela_produtos_v1';
         let products = []; // Array para armazenar os dados dos produtos
+        let sortDirection = { 0: 1, 1: 1 }; // 1 = asc, -1 = desc
+
+        function saveProductsToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        }
+
+        function loadProductsFromStorage() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    products = JSON.parse(raw);
+                } catch (e) {
+                    products = [];
+                }
+            } else {
+                products = [];
+            }
+        }
 
         function addProduct() {
             const nameInput = document.getElementById('productName');
@@ -49,7 +92,9 @@
             const date = dateInput.value;
 
             if (name && date) {
-                products.push({ name, date });
+                const id = Date.now();
+                products.push({ id, name, date });
+                saveProductsToStorage();
                 renderTable();
                 nameInput.value = '';
                 dateInput.value = '';
@@ -58,15 +103,22 @@
             }
         }
 
-        function renderTable() {
+        // renderTable agora aceita uma lista opcional para mostrar (padrão: todos os produtos)
+        function renderTable(list = products) {
             // Limpa a tabela antes de renderizar
             productList.innerHTML = ''; 
             
-            products.forEach(product => {
+            if (!list.length) {
+                productList.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;padding:12px;">Nenhum produto encontrado</td></tr>';
+                return;
+            }
+
+            list.forEach(product => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${product.name}</td>
+                    <td>${escapeHtml(product.name)}</td>
                     <td>${new Date(product.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                    <td><button class="delete-btn" onclick="deleteProduct(${product.id})">Excluir</button></td>
                 `;
                 productList.appendChild(row);
             });
@@ -74,27 +126,66 @@
 
         function sortTable(columnIndex) {
             const isNameColumn = columnIndex === 0;
-            
+            const dir = sortDirection[columnIndex] || 1;
+
             products.sort((a, b) => {
                 if (isNameColumn) {
-                    // Ordenação por nome (string)
-                    return a.name.localeCompare(b.name);
+                    return dir * a.name.localeCompare(b.name);
                 } else {
-                    // Ordenação por data (comparação de datas)
-                    // Cria objetos Date para comparação correta
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
-                    return dateA - dateB;
+                    return dir * (dateA - dateB);
                 }
             });
-            
-            // Inverte a ordem se já estiver ordenado de uma forma (para alternar crescente/decrescente)
-            // Uma lógica mais robusta envolveria rastrear a direção atual da ordenação.
-            // Para este exemplo simples, basta reordenar sempre de forma crescente.
-            // Se quiser alternar, adicione uma variável de estado para a direção.
 
-            renderTable(); // Re-renderiza a tabela com os dados ordenados
+            // inverte direção para próxima vez
+            sortDirection[columnIndex] = -dir;
+
+            saveProductsToStorage();
+            // se estiver em busca, reaplica a busca; caso contrário re-renderiza todos
+            const q = document.getElementById('searchInput').value.trim();
+            if (q) searchProducts();
+            else renderTable();
         }
+
+        // Busca por nome (ou por data formatada). Se campo vazio, mostra todos.
+        function searchProducts() {
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (!q) {
+                renderTable();
+                return;
+            }
+            const filtered = products.filter(p => {
+                const nameMatch = p.name.toLowerCase().includes(q);
+                const dateStr = new Date(p.date + 'T00:00:00').toLocaleDateString('pt-BR').toLowerCase();
+                const dateMatch = dateStr.includes(q);
+                return nameMatch || dateMatch;
+            });
+            renderTable(filtered);
+        }
+
+        function deleteProduct(id) {
+            if (!confirm('Deseja excluir este produto?')) return;
+            const idx = products.findIndex(p => p.id === id);
+            if (idx === -1) return;
+            products.splice(idx, 1);
+            saveProductsToStorage();
+            const q = document.getElementById('searchInput').value.trim();
+            if (q) searchProducts();
+            else renderTable();
+        }
+
+        // Pequena função para evitar injeção ao inserir texto no innerHTML
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Carrega produtos salvos ao abrir a página
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProductsFromStorage();
+            renderTable();
+        });
     </script>
 
 </body>
