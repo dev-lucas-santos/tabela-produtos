@@ -188,6 +188,7 @@
             return String(text).replace(/[&<>"']/g, m => map[m]);
         }
 
+        
         // Carrega produtos salvos ao abrir a página
         document.addEventListener('DOMContentLoaded', () => {
             loadProductsFromStorage();
