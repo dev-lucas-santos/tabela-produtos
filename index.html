@@ -14,6 +14,7 @@
 <body>
 
     <h1>Gestão de Produtos</h1>
+    <span id="storageStatus" class="storage-status hidden" aria-live="polite">Dados salvos no dispositivo</span>
 
     <div class="form-container">
         <input type="text" id="productName" placeholder="Nome do Produto">
@@ -45,11 +46,25 @@
     <script>
         const productList = document.getElementById('productList');
         const STORAGE_KEY = 'tabela_produtos_v1';
+        const QUEUE_KEY = 'tabela_produtos_queue_v1';
+        const API = 'http://localhost:3000/api/products';
         let products = []; // Array para armazenar os dados dos produtos
         let sortDirection = { 0: 1, 1: 1, 2: 1 }; // 1 = asc, -1 = desc
+        let queue = [];
 
         function saveProductsToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        }
+
+        function saveQueueToStorage() {
+            localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+            updateStorageStatus();
+        }
+
+        function loadQueueFromStorage() {
+            const raw = localStorage.getItem(QUEUE_KEY);
+            if (!raw) return [];
+            try { return JSON.parse(raw); } catch (e) { return []; }
         }
 
         function loadProductsFromStorage() {
@@ -85,12 +100,18 @@
             }
 
             const id = Date.now();
-            products.push({ id, name, date, quantity });
+            const newProduct = { id, name, date, quantity };
+            products.push(newProduct);
+            // enfileira a operação para sincronizar com API quando possível
+            queue.push({ type: 'add', product: newProduct });
             saveProductsToStorage();
+            saveQueueToStorage();
             renderTable();
             nameInput.value = '';
             dateInput.value = '';
             quantityInput.value = '';
+            // tenta sincronizar imediatamente
+            flushQueue();
         }
 
         // renderTable agora aceita uma lista opcional para mostrar (padrão: todos os produtos)
@@ -164,11 +185,16 @@
             if (products[idx].quantity === 0) {
                 // remove automaticamente quando chega a zero
                 products.splice(idx, 1);
+                queue.push({ type: 'delete', id });
+            } else {
+                queue.push({ type: 'updateQuantity', id, delta });
             }
             saveProductsToStorage();
+            saveQueueToStorage();
             const q = document.getElementById('searchInput').value.trim();
             if (q) searchProducts();
             else renderTable();
+            flushQueue();
         }
 
         function deleteProduct(id) {
@@ -176,10 +202,13 @@
             const idx = products.findIndex(p => p.id === id);
             if (idx === -1) return;
             products.splice(idx, 1);
+            queue.push({ type: 'delete', id });
             saveProductsToStorage();
+            saveQueueToStorage();
             const q = document.getElementById('searchInput').value.trim();
             if (q) searchProducts();
             else renderTable();
+            flushQueue();
         }
 
         // Pequena função para evitar injeção ao inserir texto no innerHTML
@@ -189,11 +218,92 @@
         }
 
         
+        // Helper para mostrar o estado de armazenamento (local / remoto)
+        function setStorageStatus(text, show) {
+            const el = document.getElementById('storageStatus');
+            if (!el) return;
+            el.textContent = text || '';
+            if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+        }
+
         // Carrega produtos salvos ao abrir a página
         document.addEventListener('DOMContentLoaded', () => {
             loadProductsFromStorage();
+            queue = loadQueueFromStorage();
             renderTable();
+            // Atualiza indicador de armazenamento conforme estado da fila/API
+            updateStorageStatus();
+            // tenta sincronizar em background imediatamente
+            flushQueue();
+            // e periodicamente
+            setInterval(flushQueue, 15000);
+            // também reativa quando navigator fica online
+            window.addEventListener('online', () => { flushQueue(); });
         });
+
+        // Atualiza o badge de status de armazenamento
+        function updateStorageStatus() {
+            // se não houver fila e estiver online, consideramos sincronizado
+            if (queue.length === 0 && navigator.onLine) {
+                // opcional: checar API com um ping
+                setStorageStatus('Sincronizado', true);
+                return;
+            }
+            if (!navigator.onLine) {
+                setStorageStatus('Offline — dados salvos localmente', true);
+                return;
+            }
+            if (queue.length > 0) {
+                setStorageStatus('Alterações pendentes (salvas localmente)', true);
+                return;
+            }
+            setStorageStatus('', false);
+        }
+
+        // Tenta enviar operações pendentes para a API
+        async function flushQueue() {
+            if (!queue || !queue.length) { updateStorageStatus(); return; }
+            // tenta processar em ordem
+            let changed = false;
+            for (let i = 0; i < queue.length; ) {
+                const op = queue[i];
+                try {
+                    if (op.type === 'add') {
+                        const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op.product) });
+                        if (res.ok) {
+                            const saved = await res.json();
+                            // atualiza id local para id do servidor
+                            const idx = products.findIndex(p => p.id === op.product.id);
+                            if (idx !== -1) { products[idx].id = saved.id; }
+                            // atualizar futuros ops que referenciam o id temporário
+                            queue.forEach(qop => {
+                                if (qop.id === op.product.id) qop.id = saved.id;
+                                if (qop.product && qop.product.id === op.product.id) qop.product.id = saved.id;
+                            });
+                            queue.splice(i, 1);
+                            changed = true;
+                            continue; // não incrementa i para processar novo elemento na mesma posição
+                        }
+                    } else if (op.type === 'updateQuantity') {
+                        const res = await fetch(`${API}/${op.id}/quantity`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delta: op.delta }) });
+                        if (res.ok) { queue.splice(i, 1); changed = true; continue; }
+                    } else if (op.type === 'delete') {
+                        const res = await fetch(`${API}/${op.id}`, { method: 'DELETE' });
+                        if (res.ok || res.status === 404) { queue.splice(i, 1); changed = true; continue; }
+                    }
+                } catch (e) {
+                    // problema de rede; aborta tentativa e espera próximo flush
+                    break;
+                }
+                // se não removemos o item, avançamos para o próximo para evitar loop infinito
+                i++;
+            }
+            if (changed) {
+                saveProductsToStorage();
+            }
+            saveQueueToStorage();
+            updateStorageStatus();
+        }
     </script>
 
     <footer>
